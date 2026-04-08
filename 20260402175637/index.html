@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>视频标准化处理工具</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
+          <path d="M10 22V10l14 6-14 6z" fill="white"/>
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="100%" stop-color="#8b5cf6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="logo-text">视频标准化处理工具</span>
+      </div>
+      <div class="header-meta">
+        <span class="version-badge">V1.0</span>
+        <span class="header-desc">支持帧提取 · 规格标准化 · 蒙版添加</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- STEP 1: 上传区 -->
+    <section class="upload-section" id="uploadSection">
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#f0f0ff"/>
+            <path d="M28 18v12M22 24l6-6 6 6" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="16" y="34" width="24" height="3" rx="1.5" fill="#6366f1" opacity="0.3"/>
+            <rect x="19" y="38" width="18" height="3" rx="1.5" fill="#6366f1" opacity="0.15"/>
+          </svg>
+        </div>
+        <h2 class="upload-title">拖拽视频到此处，或点击上传</h2>
+        <p class="upload-hint">支持 MP4、MOV、AVI、WebM、MKV 格式 · 单文件最大 500MB · 时长≤30分钟</p>
+        <button class="btn btn-primary btn-upload" id="uploadBtn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 6l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          选择视频文件
+        </button>
+        <input type="file" id="fileInput" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska,.mkv" hidden />
+      </div>
+      <!-- 上传进度 -->
+      <div class="upload-progress" id="uploadProgress" style="display:none">
+        <div class="progress-info">
+          <span id="uploadFileName" class="file-name"></span>
+          <span id="uploadPercent" class="progress-percent">0%</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="uploadBar"></div>
+        </div>
+        <p class="progress-status" id="uploadStatus">正在解析视频...</p>
+      </div>
+    </section>
+
+    <!-- STEP 2: 主工作区（上传后显示） -->
+    <section class="workspace" id="workspace" style="display:none">
+      <!-- 视频信息栏 -->
+      <div class="video-info-bar" id="videoInfoBar">
+        <div class="video-thumb-wrap">
+          <canvas id="thumbCanvas" width="80" height="50"></canvas>
+        </div>
+        <div class="video-meta">
+          <span class="video-name" id="videoName">video.mp4</span>
+          <div class="video-attrs">
+            <span class="attr-item" id="attrRes">分辨率: --</span>
+            <span class="attr-item" id="attrDur">时长: --</span>
+            <span class="attr-item" id="attrFps">帧率: --</span>
+            <span class="attr-item" id="attrSize">大小: --</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="reuploadBtn">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 1 0 5-5 5 5 0 0 0-3.5 1.5L2 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2 2v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          重新上传
+        </button>
+      </div>
+
+      <!-- 上方：视频预览（左）+ 截取静帧（右）并列 -->
+      <div class="workspace-top">
+        <!-- 左：原视频预览 + 帧提取控件 -->
+        <div class="panel-card video-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">原视频预览</h3>
+          </div>
+          <div class="video-preview-wrap">
+            <video id="mainVideo" class="main-video" controls playsinline></video>
+          </div>
+          <div class="frame-extract-section">
+            <div class="section-divider"><span>帧提取</span></div>
+            <div class="frame-controls">
+              <div class="time-seeker">
+                <label class="ctrl-label">选择目标帧</label>
+                <div class="seeker-row">
+                  <input type="range" id="frameSeeker" class="frame-seeker" min="0" max="1000" value="0" />
+                  <span class="seeker-time" id="seekerTime">00:00.000</span>
+                </div>
+              </div>
+              <button class="btn btn-secondary btn-block" id="extractFrameBtn">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 5l4 2-4 2V5z" fill="currentColor"/></svg>
+                提取当前帧
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右：裁剪选区 + 240×240 输出预览 -->
+        <div class="panel-card crop-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">截取静帧</h3>
+          </div>
+          <!-- 提取后显示 -->
+          <div class="frame-preview-wrap" id="framePreviewWrap" style="display:none">
+            <div class="frame-preview-header">
+              <span class="frame-preview-label">拖拽选区裁剪 → 输出 240×240</span>
+              <button class="btn btn-primary btn-sm" id="downloadFrameBtn">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v6M3 6l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 10h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                下载图片
+              </button>
+            </div>
+            <div class="crop-container" id="cropContainer">
+              <canvas id="cropSourceCanvas" class="crop-source-canvas"></canvas>
+              <div class="crop-selection" id="cropSelection" style="display:none">
+                <div class="crop-handle crop-handle-tl"></div>
+                <div class="crop-handle crop-handle-tr"></div>
+                <div class="crop-handle crop-handle-bl"></div>
+                <div class="crop-handle crop-handle-br"></div>
+              </div>
+            </div>
+            <div class="crop-hint">拖拽选区内部可移动，拖拽四角可缩放，拖拽空白区域可重新绘制选区</div>
+            <div class="frame-result-row">
+              <div class="frame-result-label">最终输出 (240×240)</div>
+              <canvas id="frameCanvas" width="240" height="240" class="frame-canvas"></canvas>
+            </div>
+          </div>
+          <!-- 未提取时占位 -->
+          <div class="crop-empty-tip" id="cropEmptyTip">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="3" y="3" width="30" height="30" rx="6" stroke="var(--gray-300)" stroke-width="1.8" stroke-dasharray="4 3"/><path d="M13 18l3 3 7-7" stroke="var(--gray-300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <p>请先在左侧提取视频帧</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 下方：输出规格 + 效果预览 + 操作栏 -->
+      <div class="workspace-bottom">
+        <!-- 输出规格配置 -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">输出规格配置</h3>
+            <span class="panel-tip">可同时勾选多个规格批量处理</span>
+          </div>
+          <div class="spec-list spec-list-row">
+            <!-- 规格1 -->
+            <div class="spec-item" id="spec1Wrap">
+              <div class="spec-check-row">
+                <label class="custom-checkbox">
+                  <input type="checkbox" id="spec1" value="white360" />
+                  <span class="checkmark"></span>
+                  <span class="spec-name">360×640 纯白填充视频</span>
+                </label>
+                <span class="spec-tag tag-white">等比缩放+白底</span>
+              </div>
+              <p class="spec-desc">原画面等比缩放适配画布，未覆盖区域填充纯白色，不裁剪任何内容</p>
+              <div class="spec-mask-row" id="mask1Row" style="display:none">
+                <label class="custom-checkbox mask-checkbox">
+                  <input type="checkbox" id="mask1" />
+                  <span class="checkmark checkmark-sm"></span>
+                  <span class="mask-label">添加蒙版效果</span>
+                </label>
+                <span class="mask-fill-fixed" id="maskFill1">蒙版外填充：纯黑</span>
+              </div>
+            </div>
+            <!-- 规格2 -->
+            <div class="spec-item" id="spec2Wrap">
+              <div class="spec-check-row">
+                <label class="custom-checkbox">
+                  <input type="checkbox" id="spec2" value="color360" />
+                  <span class="checkmark"></span>
+                  <span class="spec-name">360×640 彩色全屏视频</span>
+                </label>
+                <span class="spec-tag tag-color">等比缩放+彩色</span>
+              </div>
+              <p class="spec-desc">原画面等比缩放适配画布，未覆盖区域填充纯黑色，不裁剪任何内容</p>
+              <div class="spec-mask-row" id="mask2Row" style="display:none">
+                <label class="custom-checkbox mask-checkbox">
+                  <input type="checkbox" id="mask2" />
+                  <span class="checkmark checkmark-sm"></span>
+                  <span class="mask-label">添加蒙版效果</span>
+                </label>
+                <span class="mask-fill-fixed" id="maskFill2">蒙版外填充：纯黑</span>
+              </div>
+            </div>
+            <!-- 规格3 -->
+            <div class="spec-item" id="spec3Wrap">
+              <div class="spec-check-row">
+                <label class="custom-checkbox">
+                  <input type="checkbox" id="spec3" value="split1500" />
+                  <span class="checkmark"></span>
+                  <span class="spec-name">1500×1334 左右分屏视频</span>
+                </label>
+                <span class="spec-tag tag-split">双画面同步</span>
+              </div>
+              <p class="spec-desc">左屏纯白填充 + 右屏彩色全屏，两屏同步播放同一视频内容</p>
+              <div class="spec-mask-row" id="mask3Row" style="display:none">
+                <label class="custom-checkbox mask-checkbox">
+                  <input type="checkbox" id="mask3" />
+                  <span class="checkmark checkmark-sm"></span>
+                  <span class="mask-label">添加蒙版效果（左右同时应用）</span>
+                </label>
+                <span class="mask-fill-fixed" id="maskFill3">蒙版外填充：纯黑</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 效果预览区 -->
+        <div class="panel-card" id="previewCard">
+          <div class="panel-header">
+            <h3 class="panel-title">效果预览</h3>
+            <button class="btn btn-ghost btn-sm" id="refreshPreviewBtn">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 6.5a5 5 0 1 0 5-5 5 5 0 0 0-3.5 1.5L1.5 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M1.5 1.5v3h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              刷新预览
+            </button>
+          </div>
+          <div class="preview-tabs" id="previewTabs">
+            <p class="preview-placeholder" id="previewPlaceholder">请先勾选一个输出规格查看效果预览</p>
+          </div>
+        </div>
+
+        <!-- 操作栏 -->
+        <div class="action-bar">
+          <div class="action-left">
+            <span class="selected-hint" id="selectedHint">未选择任何规格</span>
+          </div>
+          <div class="action-right">
+            <button class="btn btn-secondary" id="previewSampleBtn" disabled>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 5.5l3 1.5-3 1.5V5.5z" fill="currentColor"/></svg>
+              预览样片
+            </button>
+            <button class="btn btn-primary" id="startProcessBtn" disabled>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              开始处理
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 处理进度弹窗 -->
+    <div class="modal-overlay" id="processingModal" style="display:none">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">正在处理视频</h3>
+          <span class="modal-subtitle" id="processingSubtitle">请稍候，处理完成后将自动打包下载</span>
+        </div>
+        <div class="task-list" id="taskList">
+          <!-- 动态生成 -->
+        </div>
+        <div class="modal-total-progress">
+          <div class="total-progress-info">
+            <span>总进度</span>
+            <span id="totalProgressText">0%</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="totalProgressBar"></div>
+          </div>
+        </div>
+        <div class="modal-actions" id="modalActions" style="display:none">
+          <button class="btn btn-primary btn-lg" id="downloadAllBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 8l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            下载全部文件
+          </button>
+          <button class="btn btn-ghost" id="closeModalBtn">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 样片预览弹窗 -->
+    <div class="modal-overlay" id="sampleModal" style="display:none">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <h3 class="modal-title">效果样片预览</h3>
+          <button class="modal-close" id="closeSampleModal">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="sample-tabs" id="sampleTabs"></div>
+        <div class="sample-preview-area" id="samplePreviewArea"></div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="confirmProcessBtn">确认效果，开始处理</button>
+          <button class="btn btn-ghost" id="cancelSampleBtn">重新调整</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误提示弹窗 -->
+    <div class="toast-container" id="toastContainer"></div>
+  </main>
+
+  <footer class="footer">
+    <p>视频标准化处理工具 V1.0 · 上传文件仅保留24小时，全程HTTPS加密传输，无需登录，不收集个人信息</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
