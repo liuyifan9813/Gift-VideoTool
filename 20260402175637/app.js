@@ -547,9 +547,9 @@ function renderCropResult() {
   if (!cropRect.w || !cropRect.h) return;
 
   const SIZE      = 240;
-  const MASK_SIZE = 195;
+  const MASK_SIZE = 190;
   const RADIUS    = 25;
-  const FEATHER   = 20; // 高斯模糊半径（px）
+  const FEATHER   = 18; // 高斯模糊半径（px）
 
   // ---- 第一步：把选区画到 240×240 中间 canvas ----
   const rawCanvas = document.createElement('canvas');
